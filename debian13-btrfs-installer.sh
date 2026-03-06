@@ -333,7 +333,7 @@ echo "LANG=\$LOCALE" > /etc/default/locale
 dpkg-reconfigure -f noninteractive locales
 
 echo "[CHROOT] Creating swap file..."
-SWAP_SIZE_MB=\$((SWAP_GB * 1024))
+SWAP_SIZE_MB=$((SWAP_GB * 1024))
 truncate -s 0 /var/swap/swapfile
 chattr +C /var/swap/swapfile
 btrfs property set /var/swap compression none
