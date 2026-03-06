@@ -268,7 +268,8 @@ write_chroot_script() {
   root_hash=$(openssl passwd -6 "$ROOT_PASSWORD")
   user_hash=$(openssl passwd -6 "$USER_PASSWORD")
 
-  cat > /mnt/root/chroot-setup.sh <<CHROOT
+  # Create chroot script content with proper variable substitution
+  local chroot_content=$(cat <<EOF
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
@@ -357,19 +358,19 @@ echo "[CHROOT] Creating user..."
 useradd -m -G sudo,adm -s /bin/bash -c "\$FULLNAME" "\$USERNAME"
 
 echo "[CHROOT] Setting passwords..."
-echo "DEBUG: ROOT_HASH=$ROOT_HASH"
-echo "DEBUG: USER_HASH=$USER_HASH"
-echo "DEBUG: ROOT_PASSWORD=$ROOT_PASSWORD"
-echo "DEBUG: USER_PASSWORD=$USER_PASSWORD"
+echo "DEBUG: ROOT_HASH=\$ROOT_HASH"
+echo "DEBUG: USER_HASH=\$USER_HASH"
+echo "DEBUG: ROOT_PASSWORD=\$ROOT_PASSWORD"
+echo "DEBUG: USER_PASSWORD=\$USER_PASSWORD"
 
 # Use simpler password setting method
-echo "root:$ROOT_PASSWORD" | chpasswd
-echo "$USERNAME:$USER_PASSWORD" | chpasswd
+echo "root:\$ROOT_PASSWORD" | chpasswd
+echo "\$USERNAME:\$USER_PASSWORD" | chpasswd
 
 # Verify password files
 echo "[CHROOT] Verifying password setup..."
 grep '^root:' /etc/shadow
-grep "^$USERNAME:" /etc/shadow
+grep "^\$USERNAME:" /etc/shadow
 
 echo "[CHROOT] Installing GRUB..."
 grub-install \\
@@ -381,7 +382,7 @@ update-grub
 update-initramfs -u -k all
 
 echo "[CHROOT] Installing desktop environment..."
-echo "DEBUG: Installing DESKTOP_PKG=$DESKTOP_PKG"
+echo "DEBUG: Installing DESKTOP_PKG=\$DESKTOP_PKG"
 
 # Update package list first
 apt update
@@ -456,7 +457,11 @@ apt autoremove -y
 apt autoclean
 
 echo "[CHROOT] Setup complete!"
-CHROOT
+EOF
+)
+
+  # Write the chroot script to file
+  echo "$chroot_content" > /mnt/root/chroot-setup.sh
 
   chmod +x /mnt/root/chroot-setup.sh
   ok "Chroot script generated."
