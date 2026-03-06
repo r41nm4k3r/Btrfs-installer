@@ -303,12 +303,6 @@ EOF
 echo "[CHROOT] Setting timezone..."
 ln -sf "/usr/share/zoneinfo/\$TIMEZONE" /etc/localtime
 
-echo "[CHROOT] Configuring locales..."
-sed -i "s/# \$LOCALE UTF-8/\$LOCALE UTF-8/" /etc/locale.gen
-locale-gen
-echo "LANG=\$LOCALE" > /etc/default/locale
-dpkg-reconfigure -f noninteractive locales
-
 echo "[CHROOT] Configuring APT sources..."
 cat > /etc/apt/sources.list <<'EOF'
 deb http://deb.debian.org/debian trixie main contrib non-free non-free-firmware
@@ -323,11 +317,17 @@ echo "[CHROOT] Updating package lists..."
 apt update
 
 echo "[CHROOT] Installing kernel and base packages..."
-apt install -y linux-image-amd64 linux-headers-amd64 \\
+apt install -y locales linux-image-amd64 linux-headers-amd64 \\
   firmware-linux firmware-linux-nonfree \\
   grub-efi-amd64 efibootmgr network-manager \\
   btrfs-progs sudo vim bash-completion \\
   openssl cryptsetup initramfs-tools
+
+echo "[CHROOT] Configuring locales..."
+sed -i "s/# \$LOCALE UTF-8/\$LOCALE UTF-8/" /etc/locale.gen
+locale-gen
+echo "LANG=\$LOCALE" > /etc/default/locale
+dpkg-reconfigure -f noninteractive locales
 
 echo "[CHROOT] Creating swap file..."
 SWAP_SIZE_MB=\$((SWAP_GB * 1024))
