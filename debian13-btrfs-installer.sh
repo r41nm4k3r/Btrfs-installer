@@ -344,8 +344,8 @@ echo "/var/swap/swapfile none swap defaults 0 0" >> /etc/fstab
 swapon /var/swap/swapfile
 
 echo "[CHROOT] Configuring hibernation..."
-SWAP_OFFSET=\$(btrfs inspect-internal map-swapfile -r /var/swap/swapfile)
-BTRFS_UUID=\$(blkid -s UUID -o value "\$ROOT_PART")
+SWAP_OFFSET=$(btrfs inspect-internal map-swapfile -r /var/swap/swapfile)
+BTRFS_UUID=$(blkid -s UUID -o value "\$ROOT_PART")
 GRUB_CMD="quiet resume=UUID=\$BTRFS_UUID resume_offset=\$SWAP_OFFSET"
 sed -i "s|GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT=\"\$GRUB_CMD\"|" /etc/default/grub
 
