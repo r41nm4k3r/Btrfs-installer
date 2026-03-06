@@ -323,7 +323,7 @@ apt install -y locales linux-image-amd64 linux-headers-amd64 \\
   firmware-linux firmware-linux-nonfree \\
   grub-efi-amd64 efibootmgr network-manager \\
   btrfs-progs sudo vim bash-completion \\
-  openssl cryptsetup initramfs-tools
+  openssl cryptsetup initramfs-tools openssh-server
 
 echo "[CHROOT] Configuring locales..."
 sed -i "s/# \$LOCALE UTF-8/\$LOCALE UTF-8/" /etc/locale.gen
@@ -399,7 +399,15 @@ case "\$DESKTOP_PKG" in
   *xfce*) systemctl enable lightdm ;;
 esac
 systemctl enable NetworkManager
-systemctl enable ssh
+
+# Enable SSH service if available
+if systemctl list-unit-files | grep -q "ssh.service"; then
+  systemctl enable ssh
+elif systemctl list-unit-files | grep -q "sshd.service"; then
+  systemctl enable sshd
+else
+  echo "[CHROOT] SSH service not found, skipping SSH enable"
+fi
 
 echo "[CHROOT] Creating .mozilla subvolume..."
 mkdir -p "/home/\$USERNAME"
