@@ -114,7 +114,7 @@ sudo grep -i snapshot /boot/grub/grub.cfg
 4. **Secure Boot**: Disable for hibernation support
 
 ### Log Files
-- Installation log: `/tmp/debian13-btrfs-installer.log`
+- Installation log: `./debian13-btrfs-installer.log` (in script directory)
 - Chroot script: `/mnt/root/chroot-setup.sh` (in live environment)
 
 ### Recovery

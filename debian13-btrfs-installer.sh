@@ -5,7 +5,7 @@ set -Eeuo pipefail
 # Inspired by: https://sysguides.com/install-debian-13-with-btrfs
 
 SCRIPT_VERSION="1.0.0"
-LOG_FILE="/tmp/debian13-btrfs-installer.log"
+LOG_FILE="./debian13-btrfs-installer.log"
 DRY_RUN=0
 
 # ---------- UI ----------
@@ -453,8 +453,8 @@ main() {
   partition_disk
   create_subvolumes
   mount_layout
-  generate_fstab
   bootstrap_and_chroot
+  generate_fstab
   write_chroot_script
   execute_chroot
   cleanup_and_reboot
