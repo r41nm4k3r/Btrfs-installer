@@ -269,7 +269,7 @@ write_chroot_script() {
   user_hash=$(openssl passwd -6 "$USER_PASSWORD")
 
   # Create basic chroot script first
-  cat > /mnt/root/chroot-setup.sh << 'SCRIPT'
+  cat > /mnt/root/chroot-setup.sh <<SCRIPT
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
@@ -291,20 +291,20 @@ USER_PASSWORD="$USER_PASSWORD"
 
 export DEBIAN_FRONTEND=noninteractive
 
-echo "[CHROOT] Starting setup with hostname: $HOSTNAME, user: $USERNAME"
+echo "[CHROOT] Starting setup with hostname: \$HOSTNAME, user: \$USERNAME"
 
 echo "[CHROOT] Hostname and hosts..."
-echo "$HOSTNAME" > /etc/hostname
+echo "\$HOSTNAME" > /etc/hostname
 cat > /etc/hosts << 'EOF'
 127.0.0.1 localhost
-127.0.1.1 $HOSTNAME
+127.0.1.1 \$HOSTNAME
 ::1 localhost ip6-localhost ip6-loopback
 ff02::1 ip6-allnodes
 ff02::2 ip6-allrouters
 EOF
 
 echo "[CHROOT] Setting timezone..."
-ln -sf "/usr/share/zoneinfo/$TIMEZONE" /etc/localtime
+ln -sf "/usr/share/zoneinfo/\$TIMEZONE" /etc/localtime
 
 echo "[CHROOT] Configuring APT sources..."
 cat > /etc/apt/sources.list << 'EOF'
@@ -323,39 +323,39 @@ echo "[CHROOT] Installing kernel and base packages..."
 apt install -y locales linux-image-amd64 linux-headers-amd64 firmware-linux firmware-linux-nonfree grub-efi-amd64 efibootmgr network-manager btrfs-progs sudo vim bash-completion openssl cryptsetup initramfs-tools openssh-server
 
 echo "[CHROOT] Configuring locales..."
-sed -i "s/# $LOCALE UTF-8/$LOCALE UTF-8/" /etc/locale.gen
+sed -i "s/# \$LOCALE UTF-8/\$LOCALE UTF-8/" /etc/locale.gen
 locale-gen
-echo "LANG=$LOCALE" > /etc/default/locale
+echo "LANG=\$LOCALE" > /etc/default/locale
 dpkg-reconfigure -f noninteractive locales
 
 echo "[CHROOT] Creating swap file..."
-SWAP_SIZE_MB=$((SWAP_GB * 1024))
+SWAP_SIZE_MB=\$((SWAP_GB * 1024))
 truncate -s 0 /var/swap/swapfile
 chattr +C /var/swap/swapfile
 btrfs property set /var/swap compression none
-dd if=/dev/zero of=/var/swap/swapfile bs=1M count="$SWAP_SIZE_MB" status=progress
+dd if=/dev/zero of=/var/swap/swapfile bs=1M count="\$SWAP_SIZE_MB" status=progress
 chmod 600 /var/swap/swapfile
 mkswap -L SWAP /var/swap/swapfile
 echo "/var/swap/swapfile none swap defaults 0 0" >> /etc/fstab
 swapon /var/swap/swapfile
 
 echo "[CHROOT] Configuring hibernation..."
-SWAP_OFFSET=$(btrfs inspect-internal map-swapfile -r /var/swap/swapfile)
-BTRFS_UUID=$(blkid -s UUID -o value "$ROOT_PART")
-GRUB_CMD="quiet resume=UUID=$BTRFS_UUID resume_offset=$SWAP_OFFSET"
-sed -i "s|GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT=\"$GRUB_CMD\"|" /etc/default/grub
+SWAP_OFFSET=\$(btrfs inspect-internal map-swapfile -r /var/swap/swapfile)
+BTRFS_UUID=\$(blkid -s UUID -o value "\$ROOT_PART")
+GRUB_CMD="quiet resume=UUID=\$BTRFS_UUID resume_offset=\$SWAP_OFFSET"
+sed -i "s|GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT=\"\$GRUB_CMD\"|" /etc/default/grub
 
 cat > /etc/initramfs-tools/conf.d/resume << 'EOF'
 RESUME=/var/swap/swapfile
-RESUME_OFFSET=$SWAP_OFFSET
+RESUME_OFFSET=\$SWAP_OFFSET
 EOF
 
 echo "[CHROOT] Creating user..."
-useradd -m -G sudo,adm -s /bin/bash -c "$FULLNAME" "$USERNAME"
+useradd -m -G sudo,adm -s /bin/bash -c "\$FULLNAME" "\$USERNAME"
 
 echo "[CHROOT] Setting passwords..."
-echo "root:$ROOT_PASSWORD" | chpasswd
-echo "$USERNAME:$USER_PASSWORD" | chpasswd
+echo "root:\$ROOT_PASSWORD" | chpasswd
+echo "\$USERNAME:\$USER_PASSWORD" | chpasswd
 
 echo "[CHROOT] Installing GRUB..."
 grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=debian --recheck
@@ -363,7 +363,7 @@ update-grub
 update-initramfs -u -k all
 
 echo "[CHROOT] Installing desktop environment..."
-case "$DESKTOP_PKG" in
+case "\$DESKTOP_PKG" in
   *gnome*)
     echo "[CHROOT] Installing GNOME desktop..."
     apt install -y task-gnome-desktop gnome-shell gnome-session gdm3
@@ -377,13 +377,13 @@ case "$DESKTOP_PKG" in
     apt install -y task-xfce-desktop lightdm
     ;;
   *)
-    echo "[CHROOT] Installing default desktop: $DESKTOP_PKG"
-    apt install -y "$DESKTOP_PKG"
+    echo "[CHROOT] Installing default desktop: \$DESKTOP_PKG"
+    apt install -y "\$DESKTOP_PKG"
     ;;
 esac
 
 echo "[CHROOT] Enabling services..."
-case "$DESKTOP_PKG" in
+case "\$DESKTOP_PKG" in
   *gnome*) systemctl enable gdm3 ;;
   *kde*) systemctl enable sddm ;;
   *xfce*) systemctl enable lightdm ;;
@@ -399,9 +399,9 @@ else
 fi
 
 echo "[CHROOT] Creating .mozilla subvolume..."
-mkdir -p "/home/$USERNAME"
-btrfs subvolume create "/home/$USERNAME/.mozilla"
-chown "$USERNAME:$USERNAME" "/home/$USERNAME/.mozilla"
+mkdir -p "/home/\$USERNAME"
+btrfs subvolume create "/home/\$USERNAME/.mozilla"
+chown "\$USERNAME:\$USERNAME" "/home/\$USERNAME/.mozilla"
 
 echo "[CHROOT] Installing Snapper and GRUB-Btrfs..."
 apt install -y snapper btrfs-assistant inotify-tools git make
@@ -409,8 +409,8 @@ apt install -y snapper btrfs-assistant inotify-tools git make
 echo "[CHROOT] Configuring Snapper..."
 snapper -c root create-config /
 snapper -c home create-config /home
-snapper -c root set-config ALLOW_USERS="$USERNAME" SYNC_ACL=yes
-snapper -c home set-config ALLOW_USERS="$USERNAME" SYNC_ACL=yes
+snapper -c root set-config ALLOW_USERS="\$USERNAME" SYNC_ACL=yes
+snapper -c home set-config ALLOW_USERS="\$USERNAME" SYNC_ACL=yes
 snapper -c home set-config TIMELINE_CREATE=no
 
 echo "[CHROOT] Installing GRUB-Btrfs..."
