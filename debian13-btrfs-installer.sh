@@ -7,6 +7,7 @@ set -Eeuo pipefail
 SCRIPT_VERSION="1.0.0"
 LOG_FILE="./debian13-btrfs-installer.log"
 DRY_RUN=0
+DEBUG=0
 
 # ---------- UI ----------
 if [[ -t 1 ]]; then
@@ -66,7 +67,11 @@ run_cmd() {
   else
     echo -e "${BLUE}[RUN]${NC} $cmd"
     log "RUN: $cmd"
-    eval "$cmd" >> "$LOG_FILE" 2>&1
+    if [[ "$DEBUG" -eq 1 ]]; then
+      eval "$cmd" 2>&1 | tee -a "$LOG_FILE"
+    else
+      eval "$cmd" >> "$LOG_FILE" 2>&1
+    fi
   fi
 }
 
@@ -149,6 +154,10 @@ collect_inputs() {
 
   if confirm "Enable DRY-RUN mode (print commands, no changes)?"; then
     DRY_RUN=1
+  fi
+
+  if confirm "Enable DEBUG mode (show command output)?"; then
+    DEBUG=1
   fi
 }
 
@@ -259,7 +268,7 @@ write_chroot_script() {
   root_hash=$(openssl passwd -6 "$ROOT_PASSWORD")
   user_hash=$(openssl passwd -6 "$USER_PASSWORD")
 
-  cat > /mnt/root/chroot-setup.sh <<'CHROOT'
+  cat > /mnt/root/chroot-setup.sh <<CHROOT
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
@@ -279,23 +288,25 @@ USER_HASH='$user_hash'
 
 export DEBIAN_FRONTEND=noninteractive
 
+echo "[CHROOT] Starting setup with hostname: \$HOSTNAME, user: \$USERNAME"
+
 echo "[CHROOT] Hostname and hosts..."
-echo "$HOSTNAME" > /etc/hostname
+echo "\$HOSTNAME" > /etc/hostname
 cat > /etc/hosts <<'EOF'
 127.0.0.1 localhost
-127.0.1.1 $HOSTNAME
+127.0.1.1 \$HOSTNAME
 ::1 localhost ip6-localhost ip6-loopback
 ff02::1 ip6-allnodes
 ff02::2 ip6-allrouters
 EOF
 
 echo "[CHROOT] Setting timezone..."
-ln -sf "/usr/share/zoneinfo/$TIMEZONE" /etc/localtime
+ln -sf "/usr/share/zoneinfo/\$TIMEZONE" /etc/localtime
 
 echo "[CHROOT] Configuring locales..."
-sed -i "s/# $LOCALE UTF-8/$LOCALE UTF-8/" /etc/locale.gen
+sed -i "s/# \$LOCALE UTF-8/\$LOCALE UTF-8/" /etc/locale.gen
 locale-gen
-echo "LANG=$LOCALE" > /etc/default/locale
+echo "LANG=\$LOCALE" > /etc/default/locale
 dpkg-reconfigure -f noninteractive locales
 
 echo "[CHROOT] Configuring APT sources..."
@@ -312,53 +323,53 @@ echo "[CHROOT] Updating package lists..."
 apt update
 
 echo "[CHROOT] Installing kernel and base packages..."
-apt install -y linux-image-amd64 linux-headers-amd64 \
-  firmware-linux firmware-linux-nonfree \
-  grub-efi-amd64 efibootmgr network-manager \
-  btrfs-progs sudo vim bash-completion \
+apt install -y linux-image-amd64 linux-headers-amd64 \\
+  firmware-linux firmware-linux-nonfree \\
+  grub-efi-amd64 efibootmgr network-manager \\
+  btrfs-progs sudo vim bash-completion \\
   openssl cryptsetup initramfs-tools
 
 echo "[CHROOT] Creating swap file..."
-SWAP_SIZE_MB=$((SWAP_GB * 1024))
+SWAP_SIZE_MB=\$((SWAP_GB * 1024))
 truncate -s 0 /var/swap/swapfile
 chattr +C /var/swap/swapfile
 btrfs property set /var/swap compression none
-dd if=/dev/zero of=/var/swap/swapfile bs=1M count="$SWAP_SIZE_MB" status=progress
+dd if=/dev/zero of=/var/swap/swapfile bs=1M count="\$SWAP_SIZE_MB" status=progress
 chmod 600 /var/swap/swapfile
 mkswap -L SWAP /var/swap/swapfile
 echo "/var/swap/swapfile none swap defaults 0 0" >> /etc/fstab
 swapon /var/swap/swapfile
 
 echo "[CHROOT] Configuring hibernation..."
-SWAP_OFFSET=$(btrfs inspect-internal map-swapfile -r /var/swap/swapfile)
-BTRFS_UUID=$(blkid -s UUID -o value "$ROOT_PART")
-GRUB_CMD="quiet resume=UUID=$BTRFS_UUID resume_offset=$SWAP_OFFSET"
-sed -i "s|GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT=\"$GRUB_CMD\"|" /etc/default/grub
+SWAP_OFFSET=\$(btrfs inspect-internal map-swapfile -r /var/swap/swapfile)
+BTRFS_UUID=\$(blkid -s UUID -o value "\$ROOT_PART")
+GRUB_CMD="quiet resume=UUID=\$BTRFS_UUID resume_offset=\$SWAP_OFFSET"
+sed -i "s|GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT=\"\$GRUB_CMD\"|" /etc/default/grub
 
 cat > /etc/initramfs-tools/conf.d/resume <<EOF
 RESUME=/var/swap/swapfile
-RESUME_OFFSET=$SWAP_OFFSET
+RESUME_OFFSET=\$SWAP_OFFSET
 EOF
 
 echo "[CHROOT] Creating user..."
-useradd -m -G sudo,adm -s /bin/bash -c "$FULLNAME" "$USERNAME"
-echo "root:$ROOT_HASH" | chpasswd -e
-echo "$USERNAME:$USER_HASH" | chpasswd -e
+useradd -m -G sudo,adm -s /bin/bash -c "\$FULLNAME" "\$USERNAME"
+echo "root:\$ROOT_HASH" | chpasswd -e
+echo "\$USERNAME:\$USER_HASH" | chpasswd -e
 
 echo "[CHROOT] Installing GRUB..."
-grub-install \
-  --target=x86_64-efi \
-  --efi-directory=/boot/efi \
-  --bootloader-id=debian \
+grub-install \\
+  --target=x86_64-efi \\
+  --efi-directory=/boot/efi \\
+  --bootloader-id=debian \\
   --recheck
 update-grub
 update-initramfs -u -k all
 
 echo "[CHROOT] Installing desktop environment..."
-apt install -y "$DESKTOP_PKG"
+apt install -y "\$DESKTOP_PKG"
 
 echo "[CHROOT] Enabling services..."
-case "$DESKTOP_PKG" in
+case "\$DESKTOP_PKG" in
   *gnome*) systemctl enable gdm3 ;;
   *kde*) systemctl enable sddm ;;
   *xfce*) systemctl enable lightdm ;;
@@ -367,9 +378,9 @@ systemctl enable NetworkManager
 systemctl enable ssh
 
 echo "[CHROOT] Creating .mozilla subvolume..."
-mkdir -p "/home/$USERNAME"
-btrfs subvolume create "/home/$USERNAME/.mozilla"
-chown "$USERNAME:$USERNAME" "/home/$USERNAME/.mozilla"
+mkdir -p "/home/\$USERNAME"
+btrfs subvolume create "/home/\$USERNAME/.mozilla"
+chown "\$USERNAME:\$USERNAME" "/home/\$USERNAME/.mozilla"
 
 echo "[CHROOT] Installing Snapper and GRUB-Btrfs..."
 apt install -y snapper btrfs-assistant inotify-tools git make
@@ -377,17 +388,17 @@ apt install -y snapper btrfs-assistant inotify-tools git make
 echo "[CHROOT] Configuring Snapper..."
 snapper -c root create-config /
 snapper -c home create-config /home
-snapper -c root set-config ALLOW_USERS="$USERNAME" SYNC_ACL=yes
-snapper -c home set-config ALLOW_USERS="$USERNAME" SYNC_ACL=yes
+snapper -c root set-config ALLOW_USERS="\$USERNAME" SYNC_ACL=yes
+snapper -c home set-config ALLOW_USERS="\$USERNAME" SYNC_ACL=yes
 snapper -c home set-config TIMELINE_CREATE=no
 
 echo "[CHROOT] Installing GRUB-Btrfs..."
 cd /tmp
 git clone https://github.com/Antynea/grub-btrfs.git
 cd grub-btrfs
-sed -i.bkp \
-  '/^#GRUB_BTRFS_SNAPSHOT_KERNEL_PARAMETERS=/a \
-GRUB_BTRFS_SNAPSHOT_KERNEL_PARAMETERS="rd.live.overlay.overlayfs=1"' \
+sed -i.bkp \\
+  '/^#GRUB_BTRFS_SNAPSHOT_KERNEL_PARAMETERS=/a \\
+GRUB_BTRFS_SNAPSHOT_KERNEL_PARAMETERS="rd.live.overlay.overlayfs=1"' \\
   config
 make install
 systemctl enable --now grub-btrfsd.service
@@ -407,7 +418,28 @@ CHROOT
 
 execute_chroot() {
   info "Entering chroot and running setup..."
-  run_cmd "chroot /mnt /root/chroot-setup.sh"
+  
+  # Make sure chroot script exists and is executable
+  if [[ ! -x "/mnt/root/chroot-setup.sh" ]]; then
+    err "Chroot script not found or not executable"
+    return 1
+  fi
+  
+  # Copy the script to a more accessible location and run with explicit error handling
+  run_cmd "cp /mnt/root/chroot-setup.sh /mnt/tmp/chroot-setup.sh"
+  run_cmd "chmod +x /mnt/tmp/chroot-setup.sh"
+  
+  # Run chroot with explicit error checking
+  if ! chroot /mnt /tmp/chroot-setup.sh; then
+    err "Chroot script failed with exit code $?"
+    return 1
+  fi
+  
+  # Verify key components were installed
+  if [[ ! -f "/mnt/boot/grub/grub.cfg" ]]; then
+    warn "GRUB configuration not found - installation may be incomplete"
+  fi
+  
   ok "System configuration completed."
 }
 
