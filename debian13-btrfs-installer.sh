@@ -357,8 +357,8 @@ echo "[CHROOT] Setting passwords..."
 echo "DEBUG: ROOT_PASSWORD='${ROOT_PASSWORD}'"
 echo "DEBUG: USER_PASSWORD='${USER_PASSWORD}'"
 echo "DEBUG: USERNAME='${USERNAME}'"
-echo "root:${ROOT_PASSWORD}" | chpasswd
-echo "${USERNAME}:${USER_PASSWORD}" | chpasswd
+echo "root:${ROOT_PASSWORD}" | tr -d '\n' | chpasswd
+echo "${USERNAME}:${USER_PASSWORD}" | tr -d '\n' | chpasswd
 
 echo "[CHROOT] Installing GRUB..."
 grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=debian --recheck
