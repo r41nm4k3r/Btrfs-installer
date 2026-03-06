@@ -285,6 +285,8 @@ DM_SUBVOL="$DM_SUBVOL"
 DESKTOP_PKG="$DESKTOP_PKG"
 ROOT_HASH='$root_hash'
 USER_HASH='$user_hash'
+ROOT_PASSWORD='$ROOT_PASSWORD'
+USER_PASSWORD='$USER_PASSWORD'
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -353,8 +355,30 @@ EOF
 
 echo "[CHROOT] Creating user..."
 useradd -m -G sudo,adm -s /bin/bash -c "\$FULLNAME" "\$USERNAME"
+
+echo "[CHROOT] Setting passwords..."
+echo "DEBUG: ROOT_HASH=\$ROOT_HASH"
+echo "DEBUG: USER_HASH=\$USER_HASH"
+
+# Set passwords using chpasswd with explicit encoding
 echo "root:\$ROOT_HASH" | chpasswd -e
 echo "\$USERNAME:\$USER_HASH" | chpasswd -e
+
+# Alternative method if chpasswd fails
+if ! echo "root:\$ROOT_HASH" | chpasswd -e 2>/dev/null; then
+  echo "[CHROOT] Using alternative password method for root..."
+  printf "root\n\$ROOT_PASSWORD\n\$ROOT_PASSWORD\n" | passwd root
+fi
+
+if ! echo "\$USERNAME:\$USER_HASH" | chpasswd -e 2>/dev/null; then
+  echo "[CHROOT] Using alternative password method for user..."
+  printf "\$USERNAME\n\$USER_PASSWORD\n\$USER_PASSWORD\n" | passwd "\$USERNAME"
+fi
+
+# Verify password files
+echo "[CHROOT] Verifying password setup..."
+grep '^root:' /etc/shadow
+grep "^\$USERNAME:" /etc/shadow
 
 echo "[CHROOT] Installing GRUB..."
 grub-install \\
