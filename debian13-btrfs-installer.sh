@@ -357,28 +357,19 @@ echo "[CHROOT] Creating user..."
 useradd -m -G sudo,adm -s /bin/bash -c "\$FULLNAME" "\$USERNAME"
 
 echo "[CHROOT] Setting passwords..."
-echo "DEBUG: ROOT_HASH=\$ROOT_HASH"
-echo "DEBUG: USER_HASH=\$USER_HASH"
+echo "DEBUG: ROOT_HASH=$ROOT_HASH"
+echo "DEBUG: USER_HASH=$USER_HASH"
+echo "DEBUG: ROOT_PASSWORD=$ROOT_PASSWORD"
+echo "DEBUG: USER_PASSWORD=$USER_PASSWORD"
 
-# Set passwords using chpasswd with explicit encoding
-echo "root:\$ROOT_HASH" | chpasswd -e
-echo "\$USERNAME:\$USER_HASH" | chpasswd -e
-
-# Alternative method if chpasswd fails
-if ! echo "root:\$ROOT_HASH" | chpasswd -e 2>/dev/null; then
-  echo "[CHROOT] Using alternative password method for root..."
-  printf "root\n\$ROOT_PASSWORD\n\$ROOT_PASSWORD\n" | passwd root
-fi
-
-if ! echo "\$USERNAME:\$USER_HASH" | chpasswd -e 2>/dev/null; then
-  echo "[CHROOT] Using alternative password method for user..."
-  printf "\$USERNAME\n\$USER_PASSWORD\n\$USER_PASSWORD\n" | passwd "\$USERNAME"
-fi
+# Use simpler password setting method
+echo "root:$ROOT_PASSWORD" | chpasswd
+echo "$USERNAME:$USER_PASSWORD" | chpasswd
 
 # Verify password files
 echo "[CHROOT] Verifying password setup..."
 grep '^root:' /etc/shadow
-grep "^\$USERNAME:" /etc/shadow
+grep "^$USERNAME:" /etc/shadow
 
 echo "[CHROOT] Installing GRUB..."
 grub-install \\
@@ -390,7 +381,30 @@ update-grub
 update-initramfs -u -k all
 
 echo "[CHROOT] Installing desktop environment..."
-apt install -y "\$DESKTOP_PKG"
+echo "DEBUG: Installing DESKTOP_PKG=$DESKTOP_PKG"
+
+# Update package list first
+apt update
+
+# Install desktop environment with explicit package names
+case "\$DESKTOP_PKG" in
+  *gnome*)
+    echo "[CHROOT] Installing GNOME desktop..."
+    apt install -y task-gnome-desktop gnome-shell gnome-session gdm3
+    ;;
+  *kde*)
+    echo "[CHROOT] Installing KDE desktop..."
+    apt install -y task-kde-desktop sddm
+    ;;
+  *xfce*)
+    echo "[CHROOT] Installing XFCE desktop..."
+    apt install -y task-xfce-desktop lightdm
+    ;;
+  *)
+    echo "[CHROOT] Installing default desktop: \$DESKTOP_PKG"
+    apt install -y "\$DESKTOP_PKG"
+    ;;
+esac
 
 echo "[CHROOT] Enabling services..."
 case "\$DESKTOP_PKG" in
