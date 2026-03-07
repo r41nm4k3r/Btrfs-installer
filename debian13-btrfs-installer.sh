@@ -176,7 +176,7 @@ final_confirmation() {
 prep_packages() {
   info "Installing live-environment prerequisites..."
   run_cmd "apt update"
-  run_cmd "apt install -y gdisk debootstrap btrfs-progs gawk dosfstools efibootmgr git make curl locales"
+  run_cmd "apt install -y gdisk debootstrap btrfs-progs gawk make dosfstools efibootmgr git make curl locales"
 }
 
 partition_disk() {
