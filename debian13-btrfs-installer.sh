@@ -410,11 +410,35 @@ echo "[CHROOT] Installing Snapper and GRUB-Btrfs..."
 apt install -y snapper btrfs-assistant inotify-tools git make
 
 echo "[CHROOT] Configuring Snapper..."
+# Create Snapper configs without systemd services
 snapper -c root create-config /
 snapper -c home create-config /home
-snapper -c root set-config ALLOW_USERS="\$USERNAME" SYNC_ACL=yes
-snapper -c home set-config ALLOW_USERS="\$USERNAME" SYNC_ACL=yes
-snapper -c home set-config TIMELINE_CREATE=no
+
+# Configure Snapper permissions manually
+mkdir -p /etc/snapper/configs
+cat > /etc/snapper/configs/root << 'EOF'
+SUBVOLUME="/"
+ALLOW_USERS="$USERNAME"
+SYNC_ACL="yes"
+TIMELINE_CREATE="yes"
+TIMELINE_LIMIT_DAILY="10"
+TIMELINE_LIMIT_HOURLY="10"
+TIMELINE_LIMIT_MONTHLY="10"
+TIMELINE_MIN_AGE="1800"
+TIMELINE_LIMIT_WEEKLY="10"
+EOF
+
+cat > /etc/snapper/configs/home << 'EOF'
+SUBVOLUME="/home"
+ALLOW_USERS="$USERNAME"
+SYNC_ACL="yes"
+TIMELINE_CREATE="no"
+TIMELINE_LIMIT_DAILY="10"
+TIMELINE_LIMIT_HOURLY="10"
+TIMELINE_LIMIT_MONTHLY="10"
+TIMELINE_MIN_AGE="1800"
+TIMELINE_LIMIT_WEEKLY="10"
+EOF
 
 echo "[CHROOT] Installing GRUB-Btrfs..."
 cd /tmp
