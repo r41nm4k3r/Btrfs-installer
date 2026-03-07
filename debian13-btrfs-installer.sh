@@ -28,8 +28,8 @@ banner() {
   clear || true
   cat <<'BANNER'
 ╔════════════════════════════════════════════════════════════════════╗
-║       Debian 13 (Trixie) + Btrfs Installer Wizard              ║
-║         UEFI • Subvolumes • GRUB • Swap                         ║
+║       Debian 13 (Trixie) + Btrfs Installer Wizard                  ║
+║         UEFI • Subvolumes • GRUB • Swap                            ║
 ╚════════════════════════════════════════════════════════════════════╝
 BANNER
   echo -e "${MAGENTA}Version:${NC} ${SCRIPT_VERSION}"
@@ -406,6 +406,16 @@ mkdir -p "/home/\$USERNAME"
 btrfs subvolume create "/home/\$USERNAME/.mozilla"
 chown "\$USERNAME:\$USERNAME" "/home/\$USERNAME/.mozilla"
 
+echo "[CHROOT] Installing GRUB-Btrfs..."
+cd /tmp
+git clone https://github.com/Antynea/grub-btrfs.git
+cd grub-btrfs
+sed -i.bkp '/^#GRUB_BTRFS_SNAPSHOT_KERNEL_PARAMETERS=/a GRUB_BTRFS_SNAPSHOT_KERNEL_PARAMETERS="rd.live.overlay.overlayfs=1"' config
+make install
+systemctl enable --now grub-btrfsd.service
+cd /
+rm -rf /tmp/grub-btrfs
+update-grub
 
 echo "[CHROOT] Final cleanup..."
 apt autoremove -y
