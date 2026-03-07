@@ -28,8 +28,8 @@ banner() {
   clear || true
   cat <<'BANNER'
 ╔════════════════════════════════════════════════════════════════════╗
-║       Debian 13 (Trixie) + Btrfs Snapshot Installer Wizard        ║
-║         UEFI • Subvolumes • Snapper • GRUB-Btrfs • Swap           ║
+║       Debian 13 (Trixie) + Btrfs Installer Wizard              ║
+║         UEFI • Subvolumes • GRUB • Swap                         ║
 ╚════════════════════════════════════════════════════════════════════╝
 BANNER
   echo -e "${MAGENTA}Version:${NC} ${SCRIPT_VERSION}"
@@ -406,49 +406,6 @@ mkdir -p "/home/\$USERNAME"
 btrfs subvolume create "/home/\$USERNAME/.mozilla"
 chown "\$USERNAME:\$USERNAME" "/home/\$USERNAME/.mozilla"
 
-echo "[CHROOT] Installing Snapper and GRUB-Btrfs..."
-apt install -y snapper btrfs-assistant inotify-tools git make
-
-echo "[CHROOT] Configuring Snapper..."
-# Create Snapper configs without systemd services
-snapper -c root create-config /
-snapper -c home create-config /home
-
-# Configure Snapper permissions manually
-mkdir -p /etc/snapper/configs
-cat > /etc/snapper/configs/root << 'EOF'
-SUBVOLUME="/"
-ALLOW_USERS="$USERNAME"
-SYNC_ACL="yes"
-TIMELINE_CREATE="yes"
-TIMELINE_LIMIT_DAILY="10"
-TIMELINE_LIMIT_HOURLY="10"
-TIMELINE_LIMIT_MONTHLY="10"
-TIMELINE_MIN_AGE="1800"
-TIMELINE_LIMIT_WEEKLY="10"
-EOF
-
-cat > /etc/snapper/configs/home << 'EOF'
-SUBVOLUME="/home"
-ALLOW_USERS="$USERNAME"
-SYNC_ACL="yes"
-TIMELINE_CREATE="no"
-TIMELINE_LIMIT_DAILY="10"
-TIMELINE_LIMIT_HOURLY="10"
-TIMELINE_LIMIT_MONTHLY="10"
-TIMELINE_MIN_AGE="1800"
-TIMELINE_LIMIT_WEEKLY="10"
-EOF
-
-echo "[CHROOT] Installing GRUB-Btrfs..."
-cd /tmp
-git clone https://github.com/Antynea/grub-btrfs.git
-cd grub-btrfs
-sed -i.bkp '/^#GRUB_BTRFS_SNAPSHOT_KERNEL_PARAMETERS=/a GRUB_BTRFS_SNAPSHOT_KERNEL_PARAMETERS="rd.live.overlay.overlayfs=1"' config
-make install
-systemctl enable --now grub-btrfsd.service
-cd /
-rm -rf /tmp/grub-btrfs
 
 echo "[CHROOT] Final cleanup..."
 apt autoremove -y
