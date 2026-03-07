@@ -408,7 +408,7 @@ chown "\$USERNAME:\$USERNAME" "/home/\$USERNAME/.mozilla"
 
 echo "[CHROOT] Installing GRUB-Btrfs..."
 cd /tmp
-apt install -y git
+apt install -y git make btrfs-progs gawk
 git clone https://github.com/Antynea/grub-btrfs.git
 cd grub-btrfs
 sed -i.bkp '/^#GRUB_BTRFS_SNAPSHOT_KERNEL_PARAMETERS=/a GRUB_BTRFS_SNAPSHOT_KERNEL_PARAMETERS="rd.live.overlay.overlayfs=1"' config
