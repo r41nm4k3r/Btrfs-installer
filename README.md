@@ -1,12 +1,11 @@
-# Debian 13 (Trixie) Btrfs Snapshot Installer
+# Debian Installer with Btrfs Snapshots
 
-An interactive bash script that installs Debian 13 with Btrfs snapshots, Snapper, and GRUB-Btrfs for a resilient Linux system with rollback capabilities.
+An interactive bash script that installs Debian 13 with Btrfs for a resilient Linux system with rollback capabilities.
 
 ## Features
 
 - **UEFI-only** installation with modern GPT partitioning
 - **Btrfs filesystem** with optimized subvolume layout
-- **Automatic snapshots** with Snapper for system rollback
 - **GRUB-Btrfs integration** for booting directly into snapshots
 - **Hibernation support** with Btrfs swap file
 - **Multiple desktop environments**: GNOME, KDE Plasma, XFCE
@@ -25,11 +24,7 @@ An interactive bash script that installs Debian 13 with Btrfs snapshots, Snapper
 1. Boot from Debian 13 (Trixie) Live ISO in **UEFI mode**
 2. Open terminal and run:
    ```bash
-   curl -fsSL https://raw.githubusercontent.com/your-repo/debian13-btrfs-installer/main/debian13-btrfs-installer.sh | bash
-   ```
-   Or download and run:
-   ```bash
-   wget https://raw.githubusercontent.com/your-repo/debian13-btrfs-installer/main/debian13-btrfs-installer.sh
+   wget https://raw.githubusercontent.com/r41nm4k3r/Btrfs-installer/refs/heads/main/debian13-btrfs-installer.sh
    chmod +x debian13-btrfs-installer.sh
    sudo bash debian13-btrfs-installer.sh
    ```
@@ -60,25 +55,6 @@ The installer will guide you through:
 /boot/efi           (EFI partition)
 ```
 
-## Snapshot & Rollback Features
-
-### Automatic Snapshots
-- **Boot snapshots**: Created at every system boot
-- **Timeline snapshots**: Hourly snapshots for root filesystem
-- **Cleanup**: Automatic removal of old snapshots
-
-### Manual Snapshots
-```bash
-# Create snapshot
-sudo snapper create -d "Before system update"
-
-# List snapshots
-sudo snapper list
-
-# Rollback to snapshot
-sudo snapper rollback <number>
-```
-
 ### GRUB Integration
 - Boot directly into any snapshot from GRUB menu
 - Safe rollback without bootable media
@@ -86,18 +62,6 @@ sudo snapper rollback <number>
 
 ## Post-Installation
 
-### Verify Snapshot System
-```bash
-# Check Snapper status
-sudo systemctl status snapper-timeline.timer
-sudo snapper list-configs
-
-# Create test snapshot
-sudo snapper create -d "Test snapshot"
-
-# Verify GRUB integration
-sudo grep -i snapshot /boot/grub/grub.cfg
-```
 
 ### Hibernation
 - Requires Secure Boot to be disabled
@@ -121,7 +85,6 @@ sudo grep -i snapshot /boot/grub/grub.cfg
 If system fails to boot:
 1. Boot from live ISO in UEFI mode
 2. Mount Btrfs subvolumes manually
-3. Use Snapper to rollback: `snapper rollback <number>`
 
 ## Script Options
 
