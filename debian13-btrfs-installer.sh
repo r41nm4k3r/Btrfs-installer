@@ -456,17 +456,17 @@ execute_chroot() {
   ok "System configuration completed."
 }
 
-cleanup_and_reboot() {
-  info "Cleaning up and preparing for reboot..."
+finishing_and_reboot() {
+  info "Preparing for reboot..."
   
-  # Unmount all filesystems
-  run_cmd "umount -vR /mnt"
-  
-  # Verify unmount
-  if mount | grep -q "/mnt"; then
-    warn "Some mounts still active. Force unmounting..."
-    run_cmd "umount -vlf /mnt"
-  fi
+  Unmount all filesystems
+  # run_cmd "umount -vR /mnt"
+  # 
+  Verify unmount
+  # if mount | grep -q "/mnt"; then
+    # warn "Some mounts still active. Force unmounting..."
+    # run_cmd "umount -vlf /mnt"
+  # fi
   
   ok "Installation complete! System will reboot."
   if [[ "$DRY_RUN" -eq 1 ]]; then
@@ -502,7 +502,7 @@ main() {
   generate_fstab
   write_chroot_script
   execute_chroot
-  cleanup_and_reboot
+  finishing_and_reboot
 }
 
 # Run main function if script is executed directly
