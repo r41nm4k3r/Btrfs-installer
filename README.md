@@ -6,6 +6,7 @@ An interactive bash script that installs Debian 13 with Btrfs for a resilient Li
 
 - **UEFI-only** installation with modern GPT partitioning
 - **Btrfs filesystem** with optimized subvolume layout
+- **Timeshift integration** for automatic system snapshots and rollback
 - **GRUB-Btrfs integration** for booting directly into snapshots
 - **Hibernation support** with Btrfs swap file
 - **Multiple desktop environments**: GNOME, KDE Plasma, XFCE
@@ -62,6 +63,52 @@ The installer will guide you through:
 
 ## Post-Installation
 
+### Timeshift Snapshot Management
+
+The installer includes Timeshift for system snapshots and rollback capabilities:
+
+#### Automatic Snapshots
+- **Boot snapshots**: Created automatically at system boot
+- **Scheduled snapshots**: Hourly, daily, weekly, and monthly snapshots
+- **Cleanup**: Automatic removal of old snapshots based on retention policies
+
+#### Manual Snapshots
+```bash
+# Create a snapshot
+timeshift --create --comments "Before system update"
+
+# IMPORTANT: Update GRUB to include the new snapshot
+sudo update-grub
+
+# List snapshots
+timeshift --list
+
+# Restore a snapshot
+timeshift --restore --snapshot '<snapshot_id>'
+
+# Delete a snapshot
+timeshift --delete --snapshot '<snapshot_id>'
+```
+
+**Note**: After creating any snapshot with Timeshift, you must run `sudo update-grub` manually to make the snapshot available in the GRUB boot menu.
+
+#### Timeshift Configuration
+- Configuration file: `/etc/timeshift.json`
+- Snapshots location: `/timeshift-btrfs/snapshots`
+- GUI available: `timeshift-gtk` (install separately if needed)
+
+#### Verify Snapshot System
+```bash
+# Check Timeshift status
+timeshift --list
+
+# Verify GRUB integration
+sudo grep -i snapshot /boot/grub/grub.cfg
+
+# Check snapshot service status
+systemctl status grub-btrfsd.service
+```
+
 
 ### Hibernation
 - Requires Secure Boot to be disabled
@@ -85,6 +132,8 @@ The installer will guide you through:
 If system fails to boot:
 1. Boot from live ISO in UEFI mode
 2. Mount Btrfs subvolumes manually
+3. Use Timeshift to restore: `timeshift --restore --snapshot '<snapshot_id>'`
+4. Or use GRUB menu to boot into a previous snapshot
 
 ## Script Options
 
