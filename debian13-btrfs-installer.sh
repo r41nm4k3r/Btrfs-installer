@@ -413,7 +413,7 @@ git clone https://github.com/Antynea/grub-btrfs.git
 cd grub-btrfs
 sed -i.bkp '/^#GRUB_BTRFS_SNAPSHOT_KERNEL_PARAMETERS=/a GRUB_BTRFS_SNAPSHOT_KERNEL_PARAMETERS="rd.live.overlay.overlayfs=1"' config
 make install
-systemctl enable --now grub-btrfsd.service
+systemctl enable grub-btrfsd.service
 cd /
 rm -rf /tmp/grub-btrfs
 update-grub
