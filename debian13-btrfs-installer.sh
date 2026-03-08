@@ -459,10 +459,10 @@ execute_chroot() {
 finishing_and_reboot() {
   info "Preparing for reboot..."
   
-  Unmount all filesystems
+  #Unmount all filesystems
   # run_cmd "umount -vR /mnt"
   # 
-  Verify unmount
+  #Verify unmount
   # if mount | grep -q "/mnt"; then
     # warn "Some mounts still active. Force unmounting..."
     # run_cmd "umount -vlf /mnt"
